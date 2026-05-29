@@ -1,0 +1,59 @@
+# OpenAPI 2.0 (Swagger) spec for GCP API Gateway
+# Terraform の templatefile() で ${order_svc_url} が動的に置換される。
+swagger: "2.0"
+info:
+  title: "QuickBite Order API"
+  description: "フードデリバリー注文API"
+  version: "1.0.0"
+schemes:
+  - "https"
+produces:
+  - "application/json"
+consumes:
+  - "application/json"
+
+paths:
+  /orders:
+    post:
+      summary: "注文を作成する"
+      operationId: "createOrder"
+      x-google-backend:
+        address: "${order_svc_url}"
+        deadline: 30.0
+      parameters:
+        - in: body
+          name: order
+          required: true
+          schema:
+            type: object
+            required: [customer, amount]
+            properties:
+              customer: { type: string }
+              product: { type: string }
+              amount: { type: number }
+      responses:
+        "202": { description: "注文受付完了" }
+        "400": { description: "バリデーションエラー" }
+
+    get:
+      summary: "注文一覧を取得する"
+      operationId: "listOrders"
+      x-google-backend:
+        address: "${order_svc_url}"
+        deadline: 15.0
+      parameters:
+        - in: query
+          name: limit
+          type: integer
+          default: 20
+      responses:
+        "200": { description: "注文一覧" }
+
+  /health:
+    get:
+      summary: "ヘルスチェック"
+      operationId: "healthCheck"
+      x-google-backend:
+        address: "${order_svc_url}"
+      responses:
+        "200": { description: "OK" }

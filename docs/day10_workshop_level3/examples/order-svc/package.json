@@ -1,0 +1,14 @@
+{
+  "name": "order-svc",
+  "version": "1.0.0",
+  "private": true,
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "@google-cloud/pubsub": "^4.0.0",
+    "pg": "^8.13.0"
+  }
+}
