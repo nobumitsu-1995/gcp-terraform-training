@@ -1,0 +1,7 @@
+{
+  "name": "notify-svc",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "description": "Notify service Lambda. No dependencies."
+}

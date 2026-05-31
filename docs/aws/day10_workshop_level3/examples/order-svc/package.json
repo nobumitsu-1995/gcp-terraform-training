@@ -1,0 +1,10 @@
+{
+  "name": "order-svc",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "description": "Order service Lambda. Requires 'pg'; run 'npm install --omit=dev' before terraform apply.",
+  "dependencies": {
+    "pg": "^8.13.0"
+  }
+}

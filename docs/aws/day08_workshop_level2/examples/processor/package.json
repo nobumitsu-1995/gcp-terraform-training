@@ -1,0 +1,7 @@
+{
+  "name": "order-processor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Order processing Lambda (writes to S3). AWS SDK v3 is bundled in the Lambda runtime, so no dependencies are needed.",
+  "main": "index.js"
+}

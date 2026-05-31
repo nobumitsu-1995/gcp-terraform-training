@@ -1,0 +1,7 @@
+{
+  "name": "processing-svc",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "description": "Processing service Lambda. Uses only AWS SDK v3 (bundled in the Lambda runtime), so no install is needed."
+}

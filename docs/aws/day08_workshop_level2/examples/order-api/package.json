@@ -1,0 +1,7 @@
+{
+  "name": "order-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Order intake Lambda (publishes to SNS). AWS SDK v3 is bundled in the Lambda runtime, so no dependencies are needed.",
+  "main": "index.js"
+}
