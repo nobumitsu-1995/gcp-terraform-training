@@ -1,168 +1,188 @@
-# Day 6: コンテナ基礎（Docker・Cloud Run）
+# Day 6: コンテナ革命 — Docker と Cloud Run でどこでも動くアプリを作る
 
-**ゴール**: Dockerの基礎とCloud Runでコンテナをデプロイする方法を理解する。
-
----
-
-## 1. 座学トピック
-
-### コンテナとは何か
-
-| 概念 | 説明 |
-| --- | --- |
-| **イメージ** | コンテナの実行に必要なファイル一式をまとめたもの（読み取り専用のスナップショット） |
-| **コンテナ** | イメージから起動したプロセス（書き込み可能） |
-| **レジストリ** | イメージを保管・配布する場所（Artifact Registry, ECR, Docker Hub等） |
-
-### VM とコンテナの違い
-
-```
-[ VM ]                          [ Container ]
-┌─────────┐ ┌─────────┐          ┌─────┐ ┌─────┐ ┌─────┐
-│  App A  │ │  App B  │          │ App │ │ App │ │ App │
-├─────────┤ ├─────────┤          │  A  │ │  B  │ │  C  │
-│ ゲストOS│ │ ゲストOS│          └─────┘ └─────┘ └─────┘
-├─────────┤ ├─────────┤          ┌────────────────────┐
-│ Hypervisor          │          │  コンテナランタイム│
-├─────────────────────┤          ├────────────────────┤
-│ ホストOS            │          │ ホストOS           │
-└─────────────────────┘          └────────────────────┘
-重い、分単位で起動                  軽量、秒単位で起動
-```
-
-### Dockerfile の基本
-
-| 命令 | 説明 |
-| --- | --- |
-| `FROM` | ベースイメージ |
-| `WORKDIR` | 作業ディレクトリを設定 |
-| `COPY` | ホストからファイルをコピー |
-| `RUN` | ビルド時にコマンドを実行 |
-| `ENV` | 環境変数を設定 |
-| `EXPOSE` | コンテナが listen するポート（ドキュメント目的） |
-| `CMD` | コンテナ起動時に実行するコマンド |
-
-### Cloud Run の特徴
-
-- リクエスト駆動: リクエストが来たときだけコンテナを起動
-- ゼロスケール: リクエストがない時間はインスタンス数 0（課金されない）
-- 自動スケール: 負荷に応じて自動で水平スケール
-- リビジョン管理: デプロイごとに新しいリビジョンを作成、トラフィック分散可能
-
-### Cloud Run vs GCE vs GKE
-
-| | Cloud Run | GCE | GKE |
-| --- | --- | --- | --- |
-| 種類 | サーバーレス | IaaS | マネージドKubernetes |
-| 管理単位 | コンテナ | 仮想マシン | Pod |
-| 起動 | リクエスト駆動 | 常時稼働 | 常時稼働 |
-| 向いている用途 | HTTPサービス、API | カスタムOSや常時稼働ワーカー | 複雑なマイクロサービス |
-
-詳細な使い分けは [supplementary.md](./supplementary.md) を参照。
+**ゴール**: 「自分のPCでは動いたのに…」問題を解決するコンテナ技術を理解し、サーバーレスでコンテナを実行できるCloud Runを使いこなす。
 
 ---
 
-## 2. ハンズオン — Cloud Run に最初のアプリをデプロイ
+## Day 5までの課題
 
-サンプル: [examples/hello-app/](./examples/hello-app/)
+Day 5までは、GCE（仮想マシン）やGCS（静的ホスティング）の上にアプリケーションをデプロイする方法を学びました。しかし、そこには次のような課題が潜んでいます。
 
-### アプリケーション（Node.js + Express）
+- **環境差異の問題**: 自分の開発PC（例: macOS）と本番サーバー（例: Linux）のOSやライブラリのバージョンが違うため、「自分のPCでは動いたのに、サーバーにデプロイしたら動かない」という問題が頻繁に発生します。
+- **セットアップの煩雑さ**: 新しいサーバーを立てるたびに、言語のランタイム、ライブラリ、環境変数などを毎回同じように手動でセットアップする必要があり、手間がかかり、設定ミスも起きやすいです。
 
-[examples/hello-app/app.js](./examples/hello-app/app.js):
+この「環境」にまつわる根深い問題を解決するのが、**コンテナ技術**です。
 
-```javascript
-const express = require("express");
-const app = express();
+---
 
-const PORT = process.env.PORT || 8080;
-const APP_NAME = process.env.APP_NAME || "hello-app";
+## 1. コンテナ技術の核心: 環境ごと持ち運ぶ
 
-app.get("/", (req, res) => {
-  res.json({
-    message: "Hello from Cloud Run!",
-    app: APP_NAME,
-    revision: process.env.K_REVISION || "unknown",
-  });
-});
+コンテナとは、一言で言えば **「アプリケーションが動くために必要な環境（OS、ライブラリ、コード、設定）を丸ごと詰め込んだ箱」** です。
 
-app.get("/health", (req, res) => res.json({ status: "ok" }));
+この「箱」の正体が **コンテナイメージ** であり、このイメージさえあれば、Dockerがインストールされているどんなマシン上でも、全く同じようにアプリケーションを動かすことができます。
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`${APP_NAME} listening on port ${PORT}`);
-});
-```
+#### VM（仮想マシン）との違い
 
-### Dockerfile
+| 観点 | VM (仮想マシン) | コンテナ |
+| :--- | :--- | :--- |
+| **隔離単位** | OSごと | プロセス単位 |
+| **サイズ** | 大きい (数GB〜) | 小さい (数MB〜) |
+| **起動速度** | 遅い (数分) | 速い (数秒) |
+| **オーバーヘッド** | 大きい | 小さい |
+| **ポータビリティ** | 低い | 高い |
 
-[examples/hello-app/Dockerfile](./examples/hello-app/Dockerfile):
+VMが「家（OS）を丸ごと建てる」イメージなら、コンテナは「家の中の家具や荷物（アプリ）だけを段ボールに詰めて運ぶ」イメージです。ホストOSのカーネルを共有するため、非常に軽量かつ高速に動作します。
+
+---
+
+## 2. Dockerfile: コンテナの「設計図」
+
+コンテナイメージは、**Dockerfile** というテキストファイルに書かれた設計図を元に作成されます。サンプルアプリの [Dockerfile](./examples/hello-app/Dockerfile) を見てみましょう。
 
 ```dockerfile
+# 1. ベースとなるOSイメージを指定
 FROM node:20-slim
+
+# 2. 作者のラベル（任意）
 LABEL maintainer="training-team"
 
+# 3. 環境変数を設定
 ENV APP_NAME="hello-app"
 ENV NODE_ENV="production"
 
+# 4. コンテナ内の作業ディレクトリを作成・移動
 WORKDIR /app
+
+# 5. 最初に package.json をコピーして、npm install を実行
 COPY package*.json ./
 RUN npm ci --only=production
+
+# 6. アプリケーションのソースコードをすべてコピー
 COPY . .
 
+# 7. コンテナがリッスンするポートを宣言（ドキュメント目的）
 EXPOSE 8080
+
+# 8. コンテナ起動時に実行されるデフォルトコマンド
 CMD ["npm", "start"]
 ```
 
-### デプロイ手順（gcloud CLI）
+この設計図は、上から順に実行されます。
+1.  `FROM`: `node:20-slim` という軽量なNode.js実行環境イメージを土台にします。
+2.  `WORKDIR`: コンテナ内に `/app` ディレクトリを作り、以降のコマンドはそこで実行されます。
+3.  `COPY` & `RUN`: `package.json` を先にコピーして `npm ci` を実行するのがポイントです。ソースコードを変更しても `package.json` が変わらなければ、この重い処理はキャッシュが使われ、ビルドが高速になります。
+4.  `COPY . .`: アプリの全ソースコードを `/app` にコピーします。
+5.  `CMD`: このコンテナが起動したときに `npm start` を実行するよう指定します。
+
+---
+
+## 3. ハンズオン: アプリをコンテナ化し、Cloud Runへデプロイする
+
+ここからは、実際に手を動かしてコンテナ化からデプロイまでの一連の流れを体験します。
+
+サンプルコード: [examples/hello-app/](./examples/hello-app/)
+
+### ステップ1: コンテナイメージをビルドする (Docker)
+
+まず、Dockerfileを元にコンテナイメージを作成します。
 
 ```bash
-# 1. Artifact Registry にリポジトリ作成
+cd docs/gcp/day06_container/examples/hello-app
+
+# 'docker build' コマンドでイメージをビルドする
+# -t オプションで「名前:タグ」を付ける
+docker build -t hello-app:v1 .
+```
+
+### ステップ2: イメージをレジストリに登録する (Artifact Registry)
+
+ビルドしたイメージは、まだあなたのPCの中にしかありません。Cloud Runなど他のサービスから利用できるように、**Artifact Registry** というコンテナイメージの保管庫にアップロードします。
+
+```bash
+# 1. GCPでイメージを保管するリポジトリを作成
 gcloud artifacts repositories create training-repo \
   --repository-format=docker \
   --location=asia-northeast1
 
-# 2. Docker 認証設定
+# 2. gcloud経由でDockerがArtifact Registryにアクセスできるよう認証設定
 gcloud auth configure-docker asia-northeast1-docker.pkg.dev
 
-# 3. ビルド & プッシュ
+# 3. Artifact Registryで管理するための正式なイメージ名を付けてビルド
+# フォーマット: {リージョン}-docker.pkg.dev/{プロジェクトID}/{リポジトリ名}/{イメージ名}:{タグ}
 docker build -t asia-northeast1-docker.pkg.dev/${GOOGLE_CLOUD_PROJECT}/training-repo/hello-app:v1 .
-docker push asia-northeast1-docker.pkg.dev/${GOOGLE_CLOUD_PROJECT}/training-repo/hello-app:v1
 
-# 4. Cloud Run にデプロイ
+# 4. イメージをArtifact Registryにプッシュ（アップロード）
+docker push asia-northeast1-docker.pkg.dev/${GOOGLE_CLOUD_PROJECT}/training-repo/hello-app:v1
+```
+
+### ステップ3: Cloud Runでコンテナをデプロイする
+
+いよいよ、Artifact Registryに登録したイメージを使って、Cloud Runサービスを起動します。
+
+```bash
+# 'gcloud run deploy' コマンドでデプロイ
 gcloud run deploy hello-app \
   --image=asia-northeast1-docker.pkg.dev/${GOOGLE_CLOUD_PROJECT}/training-repo/hello-app:v1 \
   --region=asia-northeast1 \
   --allow-unauthenticated \
-  --port=8080 \
-  --max-instances=2 \
-  --cpu=1 --memory=256Mi
+  --port=8080
+```
+- `--image`: デプロイするコンテナイメージを指定します。
+- `--allow-unauthenticated`: 誰でもアクセスできるパブリックなサービスとして公開します。
+- `--port`: コンテナがリッスンしているポート（Dockerfileの`EXPOSE`と対応）を指定します。
 
-# 5. テスト
-curl $(gcloud run services describe hello-app --region=asia-northeast1 --format="value(status.url)")
+デプロイが完了するとURLが表示されるので、ブラウザや`curl`でアクセスしてみましょう。
+
+### ステップ4: Terraformでここまでの作業を自動化する
+
+ここまでの手作業を、Terraformで自動化しましょう。
+[examples/hello-app/terraform/](./examples/hello-app/terraform/) に、Artifact RegistryリポジトリとCloud Runサービスを定義したコードがあります。
+
+```hcl
+# main.tf
+
+# Artifact Registry リポジトリ
+resource "google_artifact_registry_repository" "repo" {
+  location      = var.region
+  repository_id = "training-repo"
+  format        = "DOCKER"
+}
+
+# Cloud Run サービス
+resource "google_cloud_run_v2_service" "hello" {
+  name     = "hello-app"
+  location = var.region
+
+  template {
+    containers {
+      image = var.container_image # デプロイするイメージ名を指定
+      ports {
+        container_port = 8080
+      }
+    }
+  }
+}
 ```
 
-### Terraform 版
-
-[examples/hello-app/terraform/main.tf](./examples/hello-app/terraform/main.tf) に Terraform で同等のリソースを定義してあります。
+このTerraformコードを実行してみましょう。
 
 ```bash
 # 環境変数を設定
 export TF_VAR_project_id=$GOOGLE_CLOUD_PROJECT
-# Cloud Run にデプロイするコンテナイメージ名を指定
+export TF_VAR_region="asia-northeast1"
+# デプロイするコンテナイメージ名を指定
 export TF_VAR_container_image="asia-northeast1-docker.pkg.dev/${GOOGLE_CLOUD_PROJECT}/training-repo/hello-app:v1"
 
 cd docs/gcp/day06_container/examples/hello-app/terraform
 terraform init
 terraform apply
 ```
-
----
-
-## 確認課題
-
-Cloud Run にデプロイしたアプリに curl でアクセスし、JSONレスポンスが返ることを確認する。
+`gcloud run deploy` で行った設定が、`google_cloud_run_v2_service` リソースの引数として宣言的に定義されていることが分かります。
 
 ---
 
 ## 次のステップ
+
+コンテナの基本をマスターしたところで、次はより複雑なデータ処理サービスを構築します。
 
 → [Day 7: データサービス（Pub/Sub・BigQuery・Cloud Functions）](../day07_data_services/README.md)
