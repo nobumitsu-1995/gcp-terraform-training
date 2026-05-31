@@ -193,6 +193,24 @@ output "data_bucket_name" {
 -/+ google_storage_bucket.hello ← 削除して再作成
 ```
 
+### `terraform init` の裏側：ファイルはいつ読み込まれるのか？
+
+`cd` で入ったディレクトリで `terraform` コマンドを実行すると、Terraformはそのディレクトリにある `*.tf` という拡張子のファイルを **すべて** 読み込み、一つの大きな設定ファイルとして内部的に扱います。`main.tf` や `variables.tf` といったファイル名は、人間が分かりやすくするための慣習であり、Terraformの動作自体には影響しません。
+
+その上で、各コマンドが何をしているかを見てみましょう。
+
+`terraform init` の主な役割は、本格的なコードの評価を始める前の **準備** です。
+
+1.  **プロバイダの検索とダウンロード**:
+    Terraformはまず `*.tf` ファイル全体をスキャンし、`terraform { required_providers { ... } }` ブロックや `provider "google" { ... }` ブロックを探します。そして、そこで宣言されているプロバイダ（例えば `hashicorp/google`）を、インターネット上の [Terraform Registry](https://registry.terraform.io/) からダウンロードします。ダウンロードされたプラグインは、プロジェクトルートの `.terraform/providers` ディレクトリに保存されます。
+
+2.  **バックエンドの初期化**:
+    `terraform { backend "gcs" { ... } }` のようなブロックがある場合、その設定に従ってリモートのStateファイルを読み書きするための準備をします。（これはDay 4で詳しく学びます）
+
+重要なのは、`init` の段階では **リソースの具体的な内容（`resource "google_storage_bucket"` の `location` や `name` など）はまだ深く評価されない** という点です。`init` はあくまで、コードを実行するための「調理器具（プロバイダ）」を揃える段階です。
+
+実際にすべてのリソース定義、変数、ローカル変数が評価され、それらの依存関係が解決されるのは、`terraform plan` や `terraform apply` を実行したときです。この段階で、Terraformは全 `.tf` ファイルから集めた情報を使って依存関係グラフを構築し、「どのリソースを」「どの順番で」「どのような属性で」作成・変更すべきかを判断します。
+
 ### Stateファイルの注意
 
 - 手動で編集してはいけない（壊れる）
