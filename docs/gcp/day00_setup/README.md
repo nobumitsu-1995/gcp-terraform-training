@@ -31,11 +31,6 @@
 # Homebrew でインストール
 brew install --cask google-cloud-sdk
 
-# シェルにパスと補完を通す（~/.zshrc に追加）
-echo 'source "$(brew --prefix)/share/google-cloud-sdk/path.zsh.inc"' >> ~/.zshrc
-echo 'source "$(brew --prefix)/share/google-cloud-sdk/completion.zsh.inc"' >> ~/.zshrc
-source ~/.zshrc
-
 # バージョン確認
 gcloud version
 # Google Cloud SDK 4xx.x.x 以上が表示されればOK
@@ -48,6 +43,15 @@ gcloud auth application-default login
 ```
 
 > ⚠️ `gcloud auth login` と `gcloud auth application-default login` は別物です。前者は gcloud CLI 自体の認証、後者はTerraformなどのアプリケーションが使う認証情報です。**両方実行してください。**
+
+> ⚠️ gcloudコマンドが使用できなかった場合は以下コマンドでパス通しをしてください。
+
+```
+# シェルにパスと補完を通す（~/.zshrc に追加）
+echo 'source "$(brew --prefix)/share/google-cloud-sdk/path.zsh.inc"' >> ~/.zshrc
+echo 'source "$(brew --prefix)/share/google-cloud-sdk/completion.zsh.inc"' >> ~/.zshrc
+source ~/.zshrc
+```
 
 ---
 
@@ -102,11 +106,11 @@ code --install-extension hediet.vscode-drawio
 
 ### VS Code 以外の場合
 
-| 環境 | 推奨ツール | 入手先 |
-| --- | --- | --- |
-| ブラウザ（インストール不要） | diagrams.net Web版 | https://app.diagrams.net/ |
-| macOS / Windows / Linux デスクトップ | drawio-desktop | https://github.com/jgraph/drawio-desktop/releases |
-| JetBrains IDE（IntelliJ, GoLand 等） | Diagrams.net Integration プラグイン | Settings → Plugins で「Diagrams.net」を検索 |
+| 環境                                 | 推奨ツール                          | 入手先                                            |
+| ------------------------------------ | ----------------------------------- | ------------------------------------------------- |
+| ブラウザ（インストール不要）         | diagrams.net Web版                  | https://app.diagrams.net/                         |
+| macOS / Windows / Linux デスクトップ | drawio-desktop                      | https://github.com/jgraph/drawio-desktop/releases |
+| JetBrains IDE（IntelliJ, GoLand 等） | Diagrams.net Integration プラグイン | Settings → Plugins で「Diagrams.net」を検索       |
 
 **Web版の使い方** (一番手軽):
 
