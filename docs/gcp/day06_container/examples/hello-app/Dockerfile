@@ -1,5 +1,5 @@
-# --- ベースイメージ（Node.js 20 の軽量版） ---
-FROM node:20-slim
+# --- ベースイメージ（Node.js 24 の軽量版） ---
+FROM node:24-slim
 
 # --- メタデータ（任意だが管理上便利） ---
 LABEL maintainer="training-team"
@@ -15,7 +15,7 @@ WORKDIR /app
 
 # --- 依存関係のインストール（キャッシュ効率のため先にpackage.jsonだけCOPY） ---
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 # --- アプリケーションコードのコピー ---
 COPY . .

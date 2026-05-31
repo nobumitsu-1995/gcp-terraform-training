@@ -186,3 +186,35 @@ terraform apply
 コンテナの基本をマスターしたところで、次はより複雑なデータ処理サービスを構築します。
 
 → [Day 7: データサービス（Pub/Sub・BigQuery・Cloud Functions）](../day07_data_services/README.md)
+
+---
+
+<br>
+
+## トラブルシューティング: よくあるエラー
+
+### エラー: `exec format error` でデプロイが失敗する
+
+Apple Silicon (M1, M2, M3など) 搭載のMacで `docker build` を行ったイメージをCloud Runにデプロイすると、コンテナが起動せずに `exec format error` というログが出力され、デプロイに失敗することがあります。
+
+-   **原因**: あなたが使っているMacのCPUアーキテクチャ (`ARM64`) と、Cloud Runの実行環境のCPUアーキテクチャ (`AMD64`) が異なるためです。`ARM64` 用にビルドされたイメージは、`AMD64` 環境では実行できません。
+
+-   **解決策**: `docker build` コマンドに `--platform linux/amd64` オプションを追加し、Cloud Runの環境に合わせたアーキテクチャのイメージを明示的にビルドします。
+
+    ```bash
+    # 修正前
+    # docker build -t [イメージ名] .
+
+    # 修正後
+    docker build --platform linux/amd64 -t [イメージ名] .
+    ```
+
+    例えば、ハンズオンのステップ2は以下のようになります。
+
+    ```bash
+    # Artifact Registryで管理するための正式なイメージ名を付けてビルド
+    docker build --platform linux/amd64 -t asia-northeast1-docker.pkg.dev/${GOOGLE_CLOUD_PROJECT}/training-repo/hello-app:v1 .
+    ```
+<br>
+
+---
