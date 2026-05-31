@@ -145,9 +145,14 @@ curl $(gcloud run services describe hello-app --region=asia-northeast1 --format=
 [examples/hello-app/terraform/main.tf](./examples/hello-app/terraform/main.tf) に Terraform で同等のリソースを定義してあります。
 
 ```bash
-cd examples/hello-app/terraform
+# 環境変数を設定
+export TF_VAR_project_id=$GOOGLE_CLOUD_PROJECT
+# Cloud Run にデプロイするコンテナイメージ名を指定
+export TF_VAR_container_image="asia-northeast1-docker.pkg.dev/${GOOGLE_CLOUD_PROJECT}/training-repo/hello-app:v1"
+
+cd docs/gcp/day06_container/examples/hello-app/terraform
 terraform init
-terraform apply -var="project_id=YOUR_PROJECT_ID"
+terraform apply
 ```
 
 ---

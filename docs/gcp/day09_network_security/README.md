@@ -57,14 +57,17 @@ Day 10 のワークショップで実装します。
 VPC、Cloud SQL（プライベートIP）、Secret Manager をまとめて構築します。
 
 ```bash
-cd docs/day09_network_security/examples/vpc-sql
+# 環境変数を設定
+export TF_VAR_project_id=$GOOGLE_CLOUD_PROJECT
+
+cd docs/gcp/day09_network_security/examples/vpc-sql
 terraform init
-terraform apply -var="project_id=YOUR_PROJECT_ID"
+terraform apply
 
 # Cloud SQL の作成には10〜15分かかります（焦らず待つ）
 
 # 検証が終わったら必ず destroy
-terraform destroy -var="project_id=YOUR_PROJECT_ID"
+terraform destroy
 ```
 
 > ⚠️ **Cloud SQL は時間課金です。** `db-f1-micro` でも $0.015/時間（≈ $11/月）かかります。**確認が終わったら必ず `terraform destroy` を実行してください。**

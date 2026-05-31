@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Day 2 サンプル: 研修で使うAPIを一括有効化する
 #
-# 事前に gcloud config set project YOUR_PROJECT_ID を実行しておくこと。
+# 事前に gcloud config set project $GOOGLE_CLOUD_PROJECT を実行しておくこと。
 
 set -euo pipefail
 

@@ -91,7 +91,7 @@ API Config の作成には数分かかることがあります。`lifecycle { cr
 サービスアカウントに必要なロールが付与されていない可能性があります:
 
 ```bash
-gcloud projects get-iam-policy YOUR_PROJECT_ID --format=json \
+gcloud projects get-iam-policy $GOOGLE_CLOUD_PROJECT --format=json \
   | jq '.bindings[] | select(.members[] | contains("SA_EMAIL"))'
 ```
 
